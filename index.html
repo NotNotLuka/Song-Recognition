@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Audio Test</title>
+</head>
+<body>
+    <button id="startBtn">Start Recording</button>
+
+    <script>
+        let recorder;
+		let ws;
+        document.getElementById('startBtn').onclick = async () => {
+            if (recorder && recorder.state === "recording") {
+                recorder.stop();
+				ws.close();
+                return;
+            }
+
+        	ws = new WebSocket('ws://127.0.0.1:8000/ws/upload');
+
+			ws.onopen = async() => {
+				try {
+					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+					recorder = new MediaRecorder(stream, { mimeType: "audio/webm; codecs=opus" });
+					recorder.ondataavailable = e => {
+						console.log(e.data);
+						if (ws.readyState === WebSocket.OPEN) {
+							ws.send(e.data);  
+						}
+					};
+					recorder.start(1000);
+				} catch (err) {
+					console.error(err);
+				}
+			}
+        };
+    </script>
+</body>
+</html>

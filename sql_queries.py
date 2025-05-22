@@ -64,6 +64,21 @@ class DBManagement:
 
         return cursor.fetchone() is not None
 
+    def get_song_name(self, youtube_id):
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+            """
+                SELECT title FROM songs
+                WHERE id = ?
+            """,
+            (youtube_id,),
+        )
+        row = cursor.fetchone()
+        title = None if row is None else row[0]
+
+        return title
+
     def get_song_youtube_id(self, song_alias):
         cursor = self.conn.cursor()
 

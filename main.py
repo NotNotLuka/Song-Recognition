@@ -2,26 +2,29 @@ from song_processing import Song, store_songs, Classifier
 import sys
 
 
-def search():
-    songs = [
-        ("out", "0J2QdDbelmY"),
-        ("example", "1lWJXDG2i0A"),
-        ("example1", "_7xMfIp-irg"),
-        ("example2", "0oox9bJaGJ8"),
-        ("real_example", "0iLcqaIS-48"),
-        ("Example", "0iLcqaIS-48"),
+def find_song(filename):
+    y, sr = Song.load_data(filename, sr=22050)
+
+    classifier = Classifier()
+    scored = classifier.add_data(y)
+    print(f"For file {filename}")
+    for yotube_id, confidence, _ in scored:
+        title = classifier.database.get_song_name(yotube_id)
+        print(f"Match found with {title} with confidence {round(confidence * 100, 1)}%")
+
+    return scored
+
+if len(sys.argv) < 2:
+    filenames = [
+        "tests/example.wav",
+        "tests/example1.wav",
+        "tests/example2.wav",
+        "tests/real_example.wav",
+        "tests/Example.wav",
     ]
-
-    for filename, song in songs[:]:
-        y, sr = Song.load_data(f"tests/{filename}.wav", sr=22050)
-
-        classifier = Classifier()
-        scored = classifier.add_data(y)
-
-        print(song, [score for score in scored if score[0] == song])
-
-
-if int(sys.argv[1]):
-    search()
-else:
+    for filename in filenames:
+        find_song(filename)
+elif sys.argv[1] == "store":
     store_songs()
+else:
+    find_song(sys.argv[1])

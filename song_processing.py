@@ -2,7 +2,7 @@ import librosa
 import numpy as np
 import matplotlib.pyplot as plt
 import yt_dlp
-import json
+import requests
 import multiprocessing
 from matplotlib.cm import colors
 from pathlib import Path
@@ -71,7 +71,6 @@ class Song:
             windows = [y]
         else:
             windows = sliding_windows(y, window_size, step)
-            print(len(windows))
 
         x = np.arange(0, window_size)
         hann_window = np.power(np.sin(np.pi * x / window_size), 2)
@@ -361,11 +360,11 @@ def process_song(args):
 
 
 def store_songs():
-    with open("RollingStone Top 500 Song", "r") as f:
-        song_data = json.load(f)
-        song_names = [
-            f'{song["songTitle"]} {song["artistTitle"]}' for song in song_data["data"]
-        ]
+    response = requests.get("https://gist.githubusercontent.com/keune/0de5c7fb669f7b682874/raw/4aabd7282ee6b58ff886af50489cbcc6c4bd1faf/RollingStone%20Top%20500%20Song")
+    song_data = response.json()
+    song_names = [
+        f'{song["songTitle"]} {song["artistTitle"]}' for song in song_data["data"]
+    ]
 
     args = list(enumerate(song_names))
 

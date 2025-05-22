@@ -54,7 +54,7 @@ class Song:
     def get_fingerprints(y, window_size, step):
         spectrogram = Song.get_spectrogram(y, window_size, step)
 
-        hashes = Song.get_hashes0(spectrogram)
+        hashes = Song.get_hashes(spectrogram)
         hashes = [str(int(element)) for element in hashes]
 
         return hashes
@@ -85,7 +85,7 @@ class Song:
         return X
 
     @staticmethod
-    def get_hashes0(
+    def get_hashes(
         spectrogram,
         binary_powers=np.array(
             [2**i for i in range(N_CHANNELS * N_SUBCHANNELS)], dtype=np.uint64
@@ -111,100 +111,6 @@ class Song:
         hashes = np.sum(maximums * binary_powers, axis=1, dtype=np.uint64)
 
         return hashes
-
-    @staticmethod
-    def get_hashes1(
-        spectrogram,
-        binary_powers=np.array(
-            [2**i for i in range(N_CHANNELS * N_SUBCHANNELS)], dtype=np.uint64
-        ),
-    ):
-        n_samples, freq_length = spectrogram.shape
-        step = freq_length // N_CHANNELS
-
-        maximums = np.zeros((n_samples, N_CHANNELS * N_SUBCHANNELS), dtype=np.uint8)
-
-        for channel_ind in range(N_CHANNELS):
-            start = channel_ind * step
-            end = start + step
-            channel = spectrogram[:, start:end]
-
-            max_vals = np.max(channel, axis=1, keepdims=True)
-            mask = max_vals == channel
-            Y, X = np.where(mask)
-
-            subchannel_index = (X / step * N_SUBCHANNELS).astype(np.uint64)
-            fingerprint = channel_ind * N_SUBCHANNELS + subchannel_index
-
-            for y in range(len(fingerprint)):
-                maximums[int(Y[y]), fingerprint[y]] = 1
-
-        hashes = np.sum(maximums * binary_powers, axis=1, dtype=np.uint64)
-        return hashes
-
-    @staticmethod
-    def get_hashes2(
-        spectrogram,
-        binary_powers=np.array(
-            [2**i for i in range(N_CHANNELS * N_SUBCHANNELS)], dtype=np.uint64
-        ),
-    ):
-        n_samples, freq_length = spectrogram.shape
-        step = freq_length // N_CHANNELS
-
-        maximums = np.zeros((n_samples, N_CHANNELS * N_SUBCHANNELS), dtype=np.uint8)
-
-        maximum_values = []
-
-        for channel_ind in range(N_CHANNELS):
-            start = channel_ind * step
-            end = start + step
-            channel = spectrogram[:, start:end]
-
-            max_vals = np.max(channel, axis=1)
-            maximum_values.append(max_vals)
-
-        maximum_values = np.array(maximum_values)
-        mean_maximum_values = np.mean(maximum_values, axis=0, keepdims=True)
-
-        thresholds = (maximum_values < mean_maximum_values).astype(
-            np.uint64
-        ) + maximum_values
-
-        for channel_ind in range(N_CHANNELS):
-            start = channel_ind * step
-            end = start + step
-            channel = spectrogram[:, start:end]
-            mask = thresholds[channel_ind][:, np.newaxis] <= channel
-            Y, X = np.where(mask)
-
-            subchannel_index = (X / step * N_SUBCHANNELS).astype(np.uint64)
-            fingerprint = channel_ind * N_SUBCHANNELS + subchannel_index
-
-            for y in range(len(fingerprint)):
-                maximums[int(Y[y]), fingerprint[y]] = 1
-
-        hashes = np.sum(maximums * binary_powers, axis=1, dtype=np.uint64)
-
-        return hashes
-
-    @staticmethod
-    def generate_hash_iterations(hashed):
-        def replace_8_bits(x, pos, val):
-            n_bits = 0b11111111
-            mask = n_bits << pos
-            x &= ~mask
-            x |= (val & n_bits) << pos
-
-            return x
-
-        changed = []
-        values = [2**i for i in range(8)]
-        for pos in range(0, 64, 8):
-            for val in values:
-                y = replace_8_bits(int(hashed), pos, val)
-                changed.append(y)
-        return changed
 
     @staticmethod
     def load_data(filepath: Path, sr=None):

@@ -42,12 +42,14 @@ async def websocket_receive_bytes(websocket: WebSocket):
     classificator = Classifier()
     header = None
     header_len = -1
+    full_signal = []
     await websocket.accept()
     try:
         while True:
             data = await websocket.receive_bytes()
             print("New data")
             signal = decode(data, header, header_len)
+            full_signal = np.concatenate((full_signal, signal))
 
             if header is None:
                 header = data
@@ -57,9 +59,11 @@ async def websocket_receive_bytes(websocket: WebSocket):
 
             await websocket.send_text(f"Received {len(data)} bytes")
     except WebSocketDisconnect:
-        scipy.io.wavfile.write(
-            "out.wav", 22050, np.array(classificator.data * 32767).astype(np.int16)
-        )
+        print("connection closed")
+        pass
+    scipy.io.wavfile.write(
+        "out.wav", 22050, np.array(full_signal * 32767).astype(np.int16)
+    )
 
 
 if __name__ == "__main__":

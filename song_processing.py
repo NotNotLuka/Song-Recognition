@@ -13,9 +13,10 @@ from tqdm import tqdm
 
 N_CHANNELS = 8
 N_SUBCHANNELS = 8
+N_datapoints = 5
 SR = 22050
 MAX_SONG_DURATION = 900
-WINDOW_SIZE = SR // 10
+WINDOW_SIZE = SR // 5
 MAX_FREQUENCY = 6000
 MATCH_THRESHOLD = 0.5
 
@@ -44,7 +45,7 @@ class Song:
 
     def store_fingerprints(self):
         window_size = WINDOW_SIZE
-        step = WINDOW_SIZE // 5
+        step = WINDOW_SIZE // 10
         hashes = Song.get_fingerprints(self.y, window_size, step)
         timestamps = [i / step for i in range(len(hashes))]
 
@@ -54,7 +55,7 @@ class Song:
     def get_fingerprints(y, window_size, step):
         spectrogram = Song.get_spectrogram(y, window_size, step)
 
-        hashes = Song.get_hashes0(spectrogram)
+        hashes = Song.get_hashes3(spectrogram)
         hashes = [str(int(element)) for element in hashes]
 
         return hashes
@@ -189,6 +190,40 @@ class Song:
         return hashes
 
     @staticmethod
+    def get_hashes3(
+        spectrogram,
+        binary_powers=np.array(
+            [2**i for i in range(N_CHANNELS * N_SUBCHANNELS)], dtype=np.uint64
+        ),
+    ):
+
+        n_samples, freq_length = spectrogram.shape
+        step = freq_length // N_CHANNELS
+
+
+        maximums = np.zeros((n_samples - N_datapoints + 1, N_CHANNELS * N_SUBCHANNELS))
+        for sample_start in range(0, n_samples - N_datapoints + 1):
+            for freq_start in range(0, freq_length, step):
+                freq_end = freq_start + step
+                channel = spectrogram[
+                    sample_start : sample_start + N_datapoints, freq_start:freq_end
+                ]
+
+                maximum_axis1 = (
+                    np.argmax(channel, axis=1) / step * N_SUBCHANNELS
+                ).astype(np.uint64)
+                maximum_axis0 = np.argmax(channel[np.arange(channel.shape[0]), maximum_axis1])
+                subchannel_index = maximum_axis1[maximum_axis0]
+
+                fingeprint = int(freq_start / step * N_SUBCHANNELS) + subchannel_index
+
+                maximums[sample_start, int(fingeprint)] = 1
+
+        hashes = np.sum(maximums * binary_powers, axis=1, dtype=np.uint64)
+
+        return hashes
+
+    @staticmethod
     def generate_hash_iterations(hashed):
         def replace_8_bits(x, pos, val):
             n_bits = 0b11111111
@@ -253,6 +288,7 @@ class Song:
 class Classifier:
     def __init__(self):
         self.data = []
+        self.windows = []
         self.matched = dict()
         self.fingerprints = dict()
         self.database = DBManagement("song_detection.db")
@@ -270,8 +306,12 @@ class Classifier:
         for end in range(window_size, len(y), step):
             window = y[start:end]
             start += step
+            self.windows.append(window)
 
-            fingerprint = Song.get_fingerprints(window, WINDOW_SIZE, step)[0]
+            if len(self.windows) < N_datapoints: continue
+
+            self.windows = self.windows[-N_datapoints:]
+            fingerprint = Song.get_fingerprints(np.concatenate(self.windows), WINDOW_SIZE, step)[0]
             if fingerprint not in self.fingerprints.keys():
                 self.fingerprints[fingerprint] = []
             self.fingerprints[fingerprint].append(start / sr)
@@ -360,7 +400,9 @@ def process_song(args):
 
 
 def store_songs():
-    response = requests.get("https://gist.githubusercontent.com/keune/0de5c7fb669f7b682874/raw/4aabd7282ee6b58ff886af50489cbcc6c4bd1faf/RollingStone%20Top%20500%20Song")
+    response = requests.get(
+        "https://gist.githubusercontent.com/keune/0de5c7fb669f7b682874/raw/4aabd7282ee6b58ff886af50489cbcc6c4bd1faf/RollingStone%20Top%20500%20Song"
+    )
     song_data = response.json()
     song_names = [
         f'{song["songTitle"]} {song["artistTitle"]}' for song in song_data["data"]

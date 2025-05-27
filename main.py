@@ -5,7 +5,6 @@ import sys
 def find_song(filename):
     y, sr = Song.load_data(filename, sr=22050)
 
-    print(len(y))
     classifier = Classifier()
     classifier.add_data(y)
     classifier.classify(cut=True)

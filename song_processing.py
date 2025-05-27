@@ -138,7 +138,7 @@ class Song:
         """
 
         n_samples, freq_length = spectrogram.shape
-        step = freq_length // N_CHANNELS
+        step = freq_length // cfg.N_CHANNELS
 
         # initializes an array to store locations of maximums for each sample
         maximums = np.zeros((n_samples, cfg.N_CHANNELS * cfg.N_SUBCHANNELS), dtype=np.uint8)
@@ -342,14 +342,8 @@ class Classifier:
         self.thread = None
 
     def add_data(self, y):
-        start = 0
         self.data = np.concatenate((self.data, y))
         self.n_windows = len(self.data) // self.step
-        # for end in range(self.window_size, len(y), self.step):
-        #    window = y[start:end]
-        #    start += self.step
-        #    self.windows.append(window)
-        print(self.n_windows)
 
     def get_current_score(self):
         out = []
@@ -369,7 +363,6 @@ class Classifier:
         """Thread to classify in the background"""
         def worker():
             while self.run_thread:
-                print(self.run_thread)
                 while self.n_windows < cfg.N_DATAPOINTS:
                     time.sleep(0.5)
                 self.classify()
@@ -410,7 +403,7 @@ class Classifier:
 
             if cut:
                 scores = self.get_current_score()
-                if len(scores) != 0 and 0.3 < scores[0][1] and 500 < scores[0][2][0]:
+                if len(scores) != 0 and 0.5 < scores[0][1] and 500 < scores[0][2][0]:
                     return
 
     def find_matches(self, fingerprint):

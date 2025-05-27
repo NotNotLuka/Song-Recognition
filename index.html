@@ -26,7 +26,8 @@
 			return;
 		}
 
-		ws = new WebSocket('wss://shazam.rpi.lan/ws/upload');
+		// ws = new WebSocket('wss://shazam.rpi.lan/ws/upload');
+		ws = new WebSocket('ws://127.0.0.1:8000/ws/upload');
 
 		ws.onopen = async() => {
 		try {

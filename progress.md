@@ -1,0 +1,22 @@
+### 08-05-2025
+Watched [this](https://www.youtube.com/watch?v=a0CVCcb0RJM) video to get the basic overview of what has to be done. Then I found the original [blog/video](https://www.youtube.com/watch?v=T4PJoAh4X1g) by Roy van Rijn from which the previous creator took the inspiration and also watched that.
+I have then Quickly made the download function from youtube so I could use it to get a song to make a spectrogram. 
+### 16-05-2025
+I was away for a while after that so my first step coming back was to verify my code with comparison to the spectrogram from [this](https://convert.ing-now.com/audio-spectrogram-creator/) website and some inbuilt libraries. After taking a closer look at the video by Roy van Rijn he mentioned checking it with song Equation by Aphex Twins which has an image of a face in a spectrogram. It sounded interesting so I decided to check that as well. 
+After that I wrote the fingerprinting algorithm and added a standardized way to download the songs and store it in the database with its fingerprints.
+## 17-05-2025
+Made some general improvements to the code base. Found the RollingStone Top 500 Songs in json format in a [github repository](https://gist.githubusercontent.com/keune/0de5c7fb669f7b682874/raw/4aabd7282ee6b58ff886af50489cbcc6c4bd1faf/RollingStone%2520Top%2520500%2520Song) and implemented multiprocessing to download all the songs mentioned in the json file.
+Then I implemented the matching algorithm but ran into an issue where it only worked for pieces of the original file and not for the recordings of music.
+### 18-05-2025
+I spent the day playing around with different window sizes and limited the frequency range to maximum of 6000Hz (within human ear range) without relying on Nyquist frequency. There was quite some success with this but it's still far from perfect. I have then implemented some error correction where one channel can have a wrong subchannel selected in a hash. This does not seem to have had much effect.
+### 20-05-2025
+I made a quick website that takes audio input, sends it to the server side via a websocket and then processes it live to try to find a song. I spent a lot of time here trying to decode the audio with ffmpeg and dealing with all the different codecs and versions. I have then found a wrapper of ffmpeg PyAV which made the job a lot easier. The algorithm does not work that well for the recorded audio so I spent the rest of the day trying to improve it. I also took a closer look at the repository of the video I watched at first and found [this](https://drive.google.com/file/d/1ahyCTXBAZiuni6RTzHzLoOwwfTRFaU-C/view) detailed description of another algorithm.
+This describes a bit more complex algorithm with target zones and creating hashes that are connected to multiple points. To switch to this approach it would require a couple more days of work to properly implement and test. I tried to implement a slightly dumber version of this algorithm but it did not work well. I have then also attempted to switch the matching metric searching for a minimal standard deviation. I would say the main advantage of the algorithm described in the file is that it includes the time differences in the hash which makes it more resistant to noise. 
+### 21-05-2025
+Throughout the day I organized the code and made some rewrote parts of it I did not like. I thought this was deadline so I have then submitted the code.
+### 25-05-2025
+I wanted to make a quick demo in my presentation so I worked on making the website operational. My laptop microphone quality is rather bad so I tried to get it work on my phone by hosting it on a raspberry pi. This caused additional issues as I needed a secure connection. After all of that was resolved the current decoding proved to be insufficient for a mobile browser. Then there was an issue with the phone's microphone so I switched back to the laptop. After a while I ended up with the current version of decoding and added a function that displays the output on the website.
+### 27-05-2025
+I mostly worked on improving the website code and making sure nothing is blocking the event loop from the FastAPI. I have also moved the processing to a background thread so that it processes the data being added constantly. This somewhat broke the code structure as I still needed it to work for `main.py`. Besides that I also added some comments and minor improvements to the rest of the codebase. 
+
+

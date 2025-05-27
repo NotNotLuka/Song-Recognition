@@ -57,7 +57,7 @@ class Song:
     def get_fingerprints(y, window_size, step):
         spectrogram = Song.get_spectrogram(y, window_size, step)
 
-        hashes = Song.get_hashes0(spectrogram)
+        hashes = Song.get_hashes(spectrogram)
         hashes = [str(int(element)) for element in hashes]
 
         return hashes
@@ -91,7 +91,7 @@ class Song:
         return X
 
     @staticmethod
-    def get_hashes0(
+    def get_hashes(
         spectrogram,
         binary_powers=np.array(
             [2**i for i in range(cfg.N_CHANNELS * cfg.N_SUBCHANNELS)], dtype=np.uint64

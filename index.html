@@ -2,38 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Audio Test</title>
+    <title>Song Recognition</title>
 </head>
 <body>
     <button id="startBtn">Start Recording</button>
-
+    <ul id="resultList"></ul>
     <script>
         let recorder;
-		let ws;
+	let ws;
         document.getElementById('startBtn').onclick = async () => {
-            if (recorder && recorder.state === "recording") {
-                recorder.stop();
-				ws.close();
-                return;
-            }
+		const btn = document.getElementById('startBtn');
+		if (btn.textContent === 'Start Recording') {
+			const resultList = document.getElementById("resultList");
+			resultList.innerHTML = ""; 
+			btn.textContent = 'Stop Recording';
+		} else {
+			btn.textContent = 'Start Recording';
+		}
 
-        	ws = new WebSocket('ws://127.0.0.1:8000/ws/upload');
+		if (recorder && recorder.state === "recording") {
+			recorder.stop();
+			ws.close();
+			return;
+		}
 
-			ws.onopen = async() => {
-				try {
-					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-					recorder = new MediaRecorder(stream, { mimeType: "audio/webm; codecs=opus" });
-					recorder.ondataavailable = e => {
-						console.log(e.data);
-						if (ws.readyState === WebSocket.OPEN) {
-							ws.send(e.data);  
-						}
-					};
-					recorder.start(1000);
-				} catch (err) {
-					console.error(err);
+		// ws = new WebSocket('wss://shazam.rpi.lan/ws/upload');
+		ws = new WebSocket('ws://127.0.0.1:8000/ws/upload');
+
+		ws.onopen = async() => {
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			recorder = new MediaRecorder(stream, { mimeType: "audio/webm; codecs=opus" });
+			recorder.ondataavailable = e => {
+				console.log(e.data);
+				if (ws.readyState === WebSocket.OPEN) {
+					ws.send(e.data);  
 				}
+			};
+			recorder.start(1000);
+		} catch (err) {
+				console.error(err);
 			}
+		}
+
+		ws.onmessage = event => {
+			try {
+				const data = JSON.parse(event.data);
+				console.log("received JSON", data);
+				const resultList = document.getElementById("resultList");
+				resultList.innerHTML = ""; 
+
+				data.forEach(([title, confidence]) => {
+					const li = document.createElement("li");
+					li.textContent = `${title} — ${confidence}`;
+					resultList.appendChild(li);
+				});
+			} catch (e) {
+				console.error("failed to parse received data", event.data, e);
+			}
+		}
         };
     </script>
 </body>

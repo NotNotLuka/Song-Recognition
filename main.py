@@ -6,7 +6,9 @@ def find_song(filename):
     y, sr = Song.load_data(filename, sr=22050)
 
     classifier = Classifier()
-    scored = classifier.add_data(y)
+    classifier.add_data(y)
+    classifier.classify(cut=True)
+    scored = classifier.get_current_score()
     print(f"For file {filename}")
     for yotube_id, confidence, _ in scored:
         title = classifier.database.get_song_name(yotube_id)

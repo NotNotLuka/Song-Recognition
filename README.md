@@ -1,4 +1,12 @@
 # Song Recognition Algorithm
+## Running the code
+To run the code make sure Python and FFMPEG are installed. To install all the libraries required run:
+`pip install -r requirements.txt`
+Then you first have to construct the database of songs. This will download ~$500$ songs from youtube which is around $3$GB and create the database with song information and fingerprints. You can run this with:
+`python main.py store`
+After you have done this you can run `main.py` with no arguments which will run the song recognition algorithm on some provided examples. If you wish to run it on your own recording you can provide the path to file as an argument:
+`python main.py filepath`
+Alternatively you can also run the file `website.py` to put up a website on a [local address](http://0.0.0.0:8000) where a live recording will get classified after pressing `start recording` and the top 5 matches will be displayed. The algorithm has some mixed results but an example of song that works fairly well is `Coldplay - Clocks` that can be found on youtube. The success rate also varies highly on the quality of the microphone.  
 ## 1. Introduction
 Approximately two months ago I stumbled onto [this](https://www.youtube.com/watch?v=a0CVCcb0RJM) youtube video about recreating Shazam. After watching the video I was quite surprised by the apparent simplicity of the algorithm. Of course I realized this is a very broad overview of what the algorithm does. So after looking at the comments I found a comment from Ron Van Rijn from whom the original video creator had taken some inspiration. I have then found a [blog](https://www.royvanrijn.com/blog/2010/06/creating-shazam-in-java/) and a [youtube video](https://www.youtube.com/watch?v=T4PJoAh4X1g) from the commenter which have then served as the main source for this project. So the question of this project is how to recognize that two recordings are of the same song. 
 ## 2. Data
@@ -45,11 +53,3 @@ This is done on every song that we have and is then stored in the database along
 Now that the hashes are stored in the database a lookup system has to be established. As we process a recording we construct windows of the desired length then find its fingerprint with an equivalent process described before. After multiple hashes are found that are in the same song in the database we look at the time difference between the two. If the time difference is small enough, that is considered a match. As we progress through the recording we rank the songs by matches and ideally get a song with significantly more matches than the others. 
 ## 4. Results
 This algorithm has some mixed results. For cuts of the songs taken from the original recordings it works rather well and after processing the entire recording a vast majority of the matches are correct. However, for actual recordings through a microphone results vary quite a lot and a correct match is somewhat rare. The reason for this could result from the best match windows being very short and potentially having a lot of hashes found close to each other therefore resulting in a false match. I have attempted to fix this by making variations of the hash algorithm and changing the match metric but this was rather unsuccesfull. I have also found a [more complex algorithm](https://drive.google.com/file/d/1ahyCTXBAZiuni6RTzHzLoOwwfTRFaU-C/view) for matching the songs which incorporates the time difference into the hash with target zones. This addresses the issues encountered so the next step for a better success rate is to implement this modified hash.  
-## 5. Running the code
-To run the code make sure Python is installed and install all the dependencies:
-`pip install -r requirements.txt`
-Then you first have to construct the database of songs. This will download ~$500$ songs from youtube which is around $3$GB and create the database with song information and fingerprints. You can run this with:
-`python main.py store`
-After you have done this you can run `main.py` with no arguments which will run the song recognition algorithm on some provided examples. If you wish to run it on your own recording you can provide the path to file as an argument:
-`python main.py filepath`
-Alternatively you can also run the file `website.py` to put up a website on a [local address](http://0.0.0.0:8000) where a live recording will get classified after pressing `start recording` and the output will be printed in terminal on the server side. The website and the server are unfinished as the algorithm did not perform well for actual recordings.  

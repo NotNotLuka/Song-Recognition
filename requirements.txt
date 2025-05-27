@@ -8,4 +8,5 @@ scipy==1.15.3
 tqdm==4.67.1
 uvicorn==0.34.2
 websockets==15.0.1
-yt-dlp==2025.4.30
+config==0.5.1
+yt-dlp

@@ -3,8 +3,12 @@ import sqlite3
 
 class DBManagement:
     def __init__(self, db_path="song_detection.db"):
-        self.conn = sqlite3.connect(db_path, timeout=100)
+        # this class is called in each classifier so thread safety is not a concern
+        self.conn = sqlite3.connect(db_path, timeout=100, check_same_thread=False)
         self.create_database()
+
+    def __del__(self):
+        self.conn.close()
 
     def search_fingerprint(self, fingerprint):
         cursor = self.conn.cursor()

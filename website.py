@@ -1,30 +1,47 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 import uvicorn
-from song_processing import Classifier
+from song_processing import Classifier, Song
 import numpy as np
-import scipy, io, av
+import io
+import subprocess
+import asyncio
+from config import Config
 
 
-def decode(audio, header=None, header_len=-1, sr=22050):
-    if header is None:
-        header = audio
-    else:
-        audio = header + audio
-    buffer = io.BytesIO(audio)
+cfg = Config("config.yaml")
 
-    container = av.open(buffer)
-    pcm = np.concatenate(
-        [frame.to_ndarray().mean(axis=0) for frame in container.decode(audio=0)]
+
+def decode_chunk(to_decode):
+    p = subprocess.run(
+        ["ffmpeg", "-loglevel", "quiet", "-hide_banner", "-f", "webm", "-i", "pipe:", "-vn", "-ar", str(cfg.SR), "-ac", "1", "-f", "wav", "-"],
+        input = to_decode,
+        stdout=subprocess.PIPE,
     )
 
-    if header_len != -1:
-        pcm = pcm[header_len:]
+    return p.stdout
 
-    pcm = scipy.signal.resample(pcm, sr)
-    signal = pcm / np.max(np.abs(pcm))
 
-    return signal
+def process_chunk(data, header, classifier):
+    if header is not None:
+        data = header[0] + data
+    decoded = decode_chunk(data)
+    signal, sr = Song.load_data(io.BytesIO(decoded))
+
+    if header is None:
+        header = (data, len(signal))
+        return [], header
+    
+    offset = header[1]
+    signal = signal[offset:]
+
+    if len(signal) == 0: 
+        return [], header
+    
+    classifier.add_data(signal)
+    scores = classifier.get_current_score()
+
+    return scores, header
 
 
 app = FastAPI()
@@ -39,31 +56,29 @@ async def get_index():
 
 @app.websocket("/ws/upload")
 async def websocket_receive_bytes(websocket: WebSocket):
-    classificator = Classifier()
-    header = None
-    header_len = -1
-    full_signal = []
     await websocket.accept()
+    loop = asyncio.get_running_loop()
+    classifier = Classifier()
+    classifier.start_thread()
+    header = None
+
     try:
         while True:
             data = await websocket.receive_bytes()
-            print("New data")
-            signal = decode(data, header, header_len)
-            full_signal = np.concatenate((full_signal, signal))
+            scores, header = process_chunk(data, header, classifier) 
 
-            if header is None:
-                header = data
-                header_len = len(signal)
-            scores = classificator.add_data(signal)
-            print(scores)
+            out = []
+            for song in scores:
+                title = classifier.database.get_song_name(song[0])
+                score = str(round(song[1] * 100, 1)) + "%"
+                out.append((title, score))
 
-            await websocket.send_text(f"Received {len(data)} bytes")
+            await websocket.send_json(out)
+
     except WebSocketDisconnect:
-        print("connection closed")
         pass
-    scipy.io.wavfile.write(
-        "out.wav", 22050, np.array(full_signal * 32767).astype(np.int16)
-    )
+    finally:
+        await loop.run_in_executor(None, classifier.stop_thread)
 
 
 if __name__ == "__main__":
